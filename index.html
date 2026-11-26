@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>고교 진로·선택과목 설계 대시보드</title>
+<meta name="description" content="고교학점제·2022 개정 교육과정 기반 진로설계 대시보드">
+<!-- ⚠️ 여기는 화면 뼈대입니다. 학교·과목·계열 데이터는 data/ 폴더의 JSON에 있습니다.
+     새 학교를 넣으려면 data/schools/... 에 JSON을 추가하고 data/regions.json에 한 줄 등록하세요.
+     이 파일은 건드리지 않아도 됩니다. -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='52' font-size='52'%3E%F0%9F%8E%93%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/css/app.css?v=6.0">
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>🎓 고교 진로·선택과목 설계 대시보드</h1>
+    <p class="lead">2022 개정 교육과정 · 고교학점제 기준 · 학교 편제 → 계열 → 과목·탐구 설계 → 생기부 진단 → 리포트</p>
+    <div class="cur-school" id="hSchool">학교를 선택해 주세요</div>
+    <div class="theme-seg noprint" id="themeSeg">
+      <span>화면</span>
+      <button data-t="dark">다크</button><button data-t="gray">그레이</button><button data-t="light">라이트</button>
+    </div>
+  </header>
+
+  <div id="banners" class="noprint"></div>
+
+  <nav class="steps noprint" id="steps" aria-label="진행 단계">
+    <button data-step="start">① 시작</button>
+    <button data-step="school">② 내 학교·비교</button>
+    <button data-step="record">③ 생기부 진단</button>
+    <button data-step="major">④ 희망 계열·학과</button>
+    <button data-step="design">⑤ 과목·탐구 설계</button>
+    <button data-step="report">⑥ 리포트</button>
+    <button data-step="snu">⑦ 서울대 배출 분석</button>
+  </nav>
+
+  <!-- ① 시작 : 학생 명단 · 진입 학년 -->
+  <section class="panel card" id="p-start">
+    <div class="sec-title">STEP 1 · 학생 선택</div>
+    <p class="note">학생 이름과 설계 내용은 <b>이 브라우저에만</b> 저장됩니다. 서버로 전송되지 않고,
+      저장소(GitHub)에도 들어가지 않으며, 언제든 삭제할 수 있습니다.
+      미성년자의 개인정보이므로 <b>공용 PC에서는 상담 후 삭제</b>해 주세요.</p>
+
+    <label class="chk" style="margin-top:14px;display:inline-flex">
+      <input type="checkbox" id="nameConsent"> <b>보호자·학생이 이름 저장에 동의했습니다</b>
+    </label>
+
+    <div class="row" style="margin-top:12px;align-items:flex-end">
+      <div class="fld">
+        <label for="nameInput">학생 이름</label>
+        <input id="nameInput" type="text" placeholder="동의 후 입력할 수 있습니다" autocomplete="off" maxlength="24" disabled>
+      </div>
+      <button class="btn sm" id="addStudentBtn" type="button" disabled>명단에 추가</button>
+    </div>
+
+    <div class="row" style="margin-top:12px;align-items:flex-end">
+      <div class="fld">
+        <label for="profileSel">학생 명단 <span class="note" style="font-weight:400">(저장된 학생)</span></label>
+        <select id="profileSel"><option value="">— 저장된 학생 없음 —</option></select>
+      </div>
+      <button class="btn sm ghost" id="loadBtn" type="button">이 학생 불러오기</button>
+      <button class="btn sm ghost" id="delBtn" type="button">명단에서 삭제</button>
+    </div>
+    <p class="note" id="rosterNote"></p>
+
+    <div class="sec-title" style="margin-top:24px">진입 학년</div>
+    <p class="note">3학년으로 올라가는 학생은 2학년 때 이수한 과목이 이미 고정되어 있어, 설계 방식이 달라집니다.</p>
+    <div class="seg" id="entrySeg" style="margin-top:10px;width:max-content">
+      <button data-entry="2">2학년으로 진입</button>
+      <button data-entry="3">3학년으로 진입</button>
+    </div>
+    <p class="note" id="entryDesc" style="margin-top:8px"></p>
+
+    <div class="btnrow">
+      <button class="btn sm" id="toSchool" type="button">학교 선택으로 →</button>
+    </div>
+  </section>
+
+  <!-- ② 학교 -->
+  <section class="panel card" id="p-school" hidden>
+    <div class="sec-title">STEP 2 · 지역 → 학교 · 참조 바스켓 비교</div>
+    <div class="row" style="align-items:flex-end">
+      <div class="fld"><label for="sidoSel">시·도</label><select id="sidoSel"></select></div>
+      <div class="fld"><label for="sigunguSel">시·군·구</label><select id="sigunguSel"></select></div>
+      <div class="fld ac" style="min-width:260px">
+        <label for="schoolSearch">학교 검색 (이름 일부 입력)</label>
+        <input id="schoolSearch" type="search" placeholder="예: 경기고" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="acList">
+        <div class="ac-list" id="acList" role="listbox"></div>
+      </div>
+      <div class="fld"><label for="schoolSel">학교</label><select id="schoolSel"><option value="">— 선택 —</option></select></div>
+    </div>
+    <p class="note" id="schoolNote" style="margin-top:10px"></p>
+
+    <div id="schoolBody" hidden>
+      <div class="sec-title" style="margin-top:22px">개설 과정</div>
+      <div class="seg" id="trackSeg" style="width:max-content"></div>
+
+      <div class="sec-title" style="margin-top:20px">학년·학기별 교과 편제</div>
+      <div class="catlegend" style="margin-bottom:8px">
+        <span><i class="cat-공통과목"></i>공통과목</span><span><i class="cat-일반선택"></i>일반선택</span>
+        <span><i class="cat-진로선택"></i>진로선택</span><span><i class="cat-융합선택"></i>융합선택</span>
+      </div>
+      <div class="curr-grid" id="currGrid"></div>
+
+      <div class="sec-title" style="margin-top:22px">전문교과·심화과목 편제</div>
+      <div id="proSubj"></div>
+
+      <div class="sec-title" style="margin-top:22px">학점배당표 편제 (공통과목 포함 전체)</div>
+      <div id="creditPlan"></div>
+
+      <div class="sec-title" style="margin-top:22px">과목별 학업성취 (학교알리미 공시 · 실측)</div>
+      <div class="seg" id="achGradeTabs" style="width:max-content;margin-bottom:10px"></div>
+      <div id="achBody"></div>
+
+      <div class="sec-title" style="margin-top:26px">참조 바스켓 비교 <span style="text-transform:none;font-weight:600" id="basketNote"></span></div>
+      <div id="compareBoard"></div>
+
+      <div class="btnrow"><button class="btn sm" id="toRecordFromSchool" type="button">생기부 진단으로 →</button>
+        <button class="btn sm ghost" id="toMajor" type="button">진단 건너뛰고 계열 선택 →</button>
+        <button class="btn sm ghost" type="button" onclick="document.querySelector('#steps button[data-step=snu]').click()">서울대 기준 불리 요인 보기 →</button></div>
+    </div>
+  </section>
+
+  <!-- ③ 계열 -->
+  <section class="panel card" id="p-major" hidden>
+    <div class="sec-title">STEP 4 · 희망 계열 / 학과</div>
+    <div id="gapHintMajor"></div>
+    <div class="fields" id="fields" style="margin-top:12px"></div>
+
+    <div class="sec-title" style="margin-top:22px">세부 학과 <span style="text-transform:none;font-weight:600">— 고르면 학과 전용 탐구 주제 풀로 설계합니다 (선택 사항)</span></div>
+    <div class="progrid" id="progGrid"></div>
+    <div class="grid2" style="margin-top:18px">
+      <div>
+        <div class="sec-title">학기별 권장 이수 로드맵</div>
+        <div class="road" id="road"></div>
+        <p class="note" id="roadNote" style="margin-top:8px"></p>
+      </div>
+      <div>
+        <div class="sec-title">진로·진학 방향</div>
+        <p class="note" id="uniLead"></p>
+        <ul class="uni" id="uniList"></ul>
+      </div>
+    </div>
+    <div class="btnrow"><button class="btn sm" id="toDesign" type="button">과목 설계로 →</button></div>
+  </section>
+
+  <!-- ④ 설계 -->
+  <section class="panel card" id="p-design" hidden>
+    <div class="sec-title">STEP 5 · 과목 선택 → 탐구 설계 <span style="text-transform:none;font-weight:600" id="designCtx"></span></div>
+    <div id="gapBanner"></div>
+
+    <div id="takenBox" hidden>
+      <div class="redesign" style="border-color:var(--ok);background:rgba(52,211,153,.08)">
+        <h4 style="color:var(--ok)">3학년 진입 — 2학년에 이수한 과목을 먼저 체크하세요</h4>
+        <p class="note">체크한 과목은 <b>고정</b>되며, 3학년 설계는 이 이력을 전제로 진행됩니다.</p>
+        <div id="takenPool" style="margin-top:10px"></div>
+        <div class="btnrow"><button class="btn sm" id="lockTaken" type="button">이수과목 확정 →</button></div>
+      </div>
+    </div>
+
+    <div class="grid2" id="designBody">
+      <div>
+        <div class="builder" id="builder"></div>
+        <div class="row" style="margin-top:12px;align-items:flex-end">
+          <div class="fld" style="flex:1;min-width:240px">
+            <label for="manualSub">공동교육과정·전문교과·온라인학교 과목 직접 추가</label>
+            <input id="manualSub" type="text" placeholder="예: 고급생명과학, 물리학 실험, 전문 수학" autocomplete="off">
+          </div>
+          <button class="btn ghost sm" id="addManual" type="button">＋ 과목 추가</button>
+        </div>
+        <p class="note" style="margin-top:6px">학교 편제에 없어도 공동교육과정·온라인학교로 이수했거나 이수 예정이면 여기에 넣으세요. 설계와 리포트에 함께 반영됩니다.</p>
+
+        <div class="sec-title" style="margin-top:24px">선택 과목별 탐구 설계</div>
+        <div class="btnrow" style="margin-top:0"><button class="btn sm" id="genDesign" type="button">선택 과목으로 탐구 설계 생성</button></div>
+        <div id="designOut"></div>
+      </div>
+      <div>
+        <div class="card summary" style="margin-top:0">
+          <div class="sec-title">내 설계 요약</div>
+          <div class="meter"><span>선택 학점</span><b><span id="credits">0</span><span style="font-size:13px;color:var(--sub)">학점</span></b></div>
+          <div class="bar2"><i id="credBar"></i></div>
+          <div class="legend" id="credTarget"></div>
+          <div class="matchbox" id="match"></div>
+          <div class="legend" id="recMatch" style="margin-top:10px"></div>
+          <div class="selected-list" id="selList"></div>
+          <div id="redesignBox"></div>
+          <button class="btn ghost sm" id="applyRec" type="button" style="width:100%;margin-top:12px">권장 과목 자동 선택</button>
+          <button class="btn ghost sm" id="resetBtn" type="button" style="width:100%;margin-top:8px">선택 초기화</button>
+        </div>
+      </div>
+    </div>
+    <div class="btnrow"><button class="btn sm" id="skipRecord" type="button">리포트 보기 →</button>
+      <button class="btn sm ghost" id="toRecord" type="button">생기부 진단 다시 하기</button></div>
+  </section>
+
+  <!-- ⑤ 생기부 -->
+  <section class="panel card" id="p-record" hidden>
+    <div class="sec-title">STEP 3 · 학교생활기록부 진단 <span style="text-transform:none;font-weight:600">— 여기서 나온 보완점이 이후 계열·과목 설계에 반영됩니다</span></div>
+
+    <div id="consentBox" class="consent">
+      <h4>🔒 개인정보 처리 동의 (필수)</h4>
+      <ul>
+        <li>업로드한 생기부는 <b>이 브라우저 안에서만</b> 분석되며 서버로 전송·저장되지 않습니다.</li>
+        <li>저장되는 것은 <b>분석 요약</b>뿐이며, 원문은 기본적으로 저장하지 않습니다.</li>
+        <li>이름·학번·주민등록번호 등 식별정보는 붙여넣기 전에 지워 주세요. (자동 마스킹도 수행합니다)</li>
+        <li>진단은 <b>기록에 실제로 있는 내용만</b> 근거로 하며, 합격 여부를 예측하지 않습니다.</li>
+        <li>언제든 [내 데이터 삭제] 버튼으로 전부 지울 수 있습니다.</li>
+      </ul>
+      <label class="chk"><input type="checkbox" id="cAgree"><span>위 내용을 이해했으며, 생기부 분석에 동의합니다.</span></label>
+      <label class="chk"><input type="checkbox" id="cGuardian"><span>미성년자인 경우, 보호자의 동의를 받았습니다.</span></label>
+      <div class="btnrow"><button class="btn sm" id="consentBtn" type="button" disabled>동의하고 진행</button></div>
+    </div>
+
+    <div id="uploadBox" hidden>
+      <p class="note">텍스트(.txt)·PDF 파일을 올리거나, 생기부 내용을 아래에 붙여넣으세요. 한글(.hwp)은 브라우저에서 직접 열 수 없으니 <b>내용을 복사해 붙여넣기</b> 해 주세요.</p>
+      <div class="dropzone" id="drop" style="margin-top:12px" tabindex="0" role="button">
+        📄 클릭하거나 파일을 여기에 끌어다 놓으세요 (.txt · .pdf)
+        <input type="file" id="fileInput" accept=".txt,.pdf,text/plain,application/pdf" hidden>
+      </div>
+      <div id="ocrBox" class="ec-bridge" hidden style="margin-top:12px"></div>
+      <div class="fld" style="margin-top:14px;width:100%">
+        <label for="recText">또는 붙여넣기</label>
+        <textarea id="recText" placeholder="세부능력 및 특기사항 / 창의적 체험활동 / 독서활동 / 행동특성 및 종합의견 등을 붙여넣으세요."></textarea>
+      </div>
+      <div class="btnrow">
+        <button class="btn sm" id="analyzeBtn" type="button">기록 읽기 → 진단</button>
+        <button class="btn sm ghost" id="clearRecBtn" type="button">입력 지우기</button>
+        <label class="chk" style="margin:0 0 0 8px"><input type="checkbox" id="keepRaw"><span style="font-size:12.5px">원문도 이 브라우저에 저장 (기본 저장 안 함)</span></label>
+      </div>
+    </div>
+
+    <div id="recEdit" hidden style="margin-top:20px"></div>
+    <div id="gradeBox" hidden style="margin-top:20px"></div>
+    <div id="diagBox" hidden style="margin-top:20px"></div>
+    <div class="btnrow"><button class="btn sm" id="toMajorFromRecord" type="button">보완점 반영해 계열 선택 →</button>
+      <button class="btn sm ghost" id="toReport" type="button">리포트 보기 →</button></div>
+  </section>
+
+  <!-- ⑥ 리포트 -->
+  <section class="panel" id="p-report" hidden>
+    <div class="btnrow noprint" style="margin:14px 0">
+      <button class="btn sm" id="printBtn" type="button">🖨️ 인쇄 / PDF 저장</button>
+      <button class="btn sm ghost" id="saveBtn" type="button">💾 진행 상황 저장</button>
+      <button class="btn sm ghost" id="exportBtn" type="button">📤 설계 JSON 내보내기</button>
+      <button class="btn sm ghost" id="wipeBtn" type="button">🗑️ 내 데이터 삭제</button>
+    </div>
+    <div class="report" id="report"></div>
+  </section>
+
+  <!-- ⑦ 서울대 배출 격차 분석 (학교 선택 없이도 열림) -->
+  <section class="panel card" id="p-snu" hidden>
+    <div class="sec-title">STEP 7 · 서울대 수시 배출 격차 — 서류평가 기준 역추산</div>
+    <div id="snuBody"></div>
+  </section>
+
+  <footer>
+    <p>본 대시보드는 학생의 자기주도적 진로설계를 돕기 위한 <b>참고용 자료</b>입니다. 합격 여부를 보장하거나 예측하지 않습니다.</p>
+    <p class="noprint">교과 편제·학업성취는 학교 교육과정 편제표 및 학교알리미 공시자료 기준 · 도서/논문은 검색으로 실재를 확인한 항목만 수록</p>
+  </footer>
+</div>
+
+<!-- 과목별 탐구 모달 -->
+<div class="modal-bg" id="modal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+    <button class="mclose" id="mClose" aria-label="닫기">✕</button>
+    <h2 id="mTitle"></h2>
+    <div class="mtag" id="mSub"></div>
+    <div class="mblock"><h3>📌 탐구 주제 후보</h3><div id="mTopics"></div></div>
+    <div class="mblock"><h3>🧪 탐구 과정 설계</h3><div class="design" id="mDesign"></div></div>
+    <div class="mblock"><h3>📚 추천 도서</h3><div id="mBooks"></div></div>
+    <div class="mblock"><h3>📄 참고 논문 (RISS·DBpia·KCI 등)</h3><div id="mPapers"></div></div>
+    <p class="disc">도서·논문은 검색으로 실재를 확인한 항목만 수록했습니다. 링크가 열리지 않으면 제목으로 직접 검색해 주세요.</p>
+  </div>
+</div>
+
+<script src="assets/js/core.js?v=6.0"></script>
+<script src="assets/js/store.js?v=6.0"></script>
+<script src="assets/js/record.js?v=6.0"></script>
+<script src="assets/js/bridge.js?v=6.0"></script>
+<script src="assets/js/snu.js?v=6.0"></script>
+<script src="assets/js/app.js?v=6.0"></script>
+</body>
+</html>
